@@ -1,0 +1,62 @@
+import json
+from difflib import get_close_matches
+
+# Load JSON base
+def load_base(file_path: str) -> dict:
+    try:
+        with open(file_path, 'r') as file:
+            return json.load(file)
+    except FileNotFoundError:
+        return {}
+
+# Save JSON base
+def save_base(file_path: str, data: dict):
+    with open(file_path, 'w') as file:
+        json.dump(data, file, indent=2)
+#Find answer
+def matchmaker(user_question: str, questions: list[str]) -> str | None:
+    matches = get_close_matches(user_question, questions, n=1, cutoff=1.0)
+    return matches[0] if matches else None
+
+# Fetch answer
+def answerfetcher(question: str, base: dict) -> str | None:
+    question_lower = question.lower()
+    lower_base = {k.lower(): v for k, v in base.items()}
+
+    if question_lower in lower_base:
+        return lower_base[question_lower]
+
+    closest = matchmaker(question_lower, list(lower_base.keys()))
+    if closest:
+        return lower_base[closest]
+
+    return None
+
+# Main bot loop with learning
+def bot():
+    file_path = "base.json"
+    base = load_base(file_path)
+
+    print("Bot: Hello! Ask me anything. Type 'quit' to exit.")
+    
+    while True:
+        user_input = input("You: ").strip()
+        if user_input.lower() == "quit":
+            print("Bot: Goodbye!")
+            break
+
+        answer = answerfetcher(user_input, base)
+        if answer:
+            print(f"Bot: {answer}")
+        else:
+            print("Bot: I don't know the answer to that yet.")
+            new_answer = input("Can you teach me the answer? ").strip()
+            if new_answer:
+                # Save the new Q&A pair
+                base[user_input] = new_answer
+                save_base(file_path, base)
+                print("Bot: Thanks! I've learned something new.")
+
+# Run the bot
+if __name__ == "__main__":
+    bot()
